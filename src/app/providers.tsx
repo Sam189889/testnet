@@ -53,6 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         overlayBlur: 'small',
                     })}
                     modalSize="compact"
+                    coolMode
                 >
                     {children}
                 </RainbowKitProvider>
