@@ -214,6 +214,13 @@ export default function Home() {
                 >
                   🎁 Rewards
                 </Link>
+                {/* Deploy Link */}
+                <Link
+                  href="/deploy"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:border-purple-400/50 transition-all text-sm font-medium"
+                >
+                  🚀 Deploy
+                </Link>
 
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
                   <span className={`w-2 h-2 rounded-full ${networkStats.isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
