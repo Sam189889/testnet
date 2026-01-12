@@ -22,8 +22,8 @@ const CHAIN_CONFIG = {
         symbol: 'CSC',
         decimals: 18,
     },
-    rpcUrls: ['http://185.249.225.122:32834'],
-    blockExplorerUrls: ['https://cryptoscience.in'],
+    rpcUrls: ['https://rpc.cryptoscience.in'],
+    blockExplorerUrls: ['https://testnet.cryptoscience.in'],
 };
 
 export default function FaucetPage() {

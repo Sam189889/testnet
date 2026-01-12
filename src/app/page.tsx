@@ -20,7 +20,7 @@ interface NetworkStats {
   isConnected: boolean;
 }
 
-const RPC_URL = 'http://185.249.225.122:32834';
+const RPC_URL = 'https://rpc.cryptoscience.in';
 const CHAIN_ID = 2151908;
 
 // Chain config for MetaMask - must match exact format
@@ -32,8 +32,8 @@ const CHAIN_CONFIG = {
     symbol: 'CSC',
     decimals: 18,
   },
-  rpcUrls: ['http://185.249.225.122:32834'],
-  blockExplorerUrls: ['https://cryptoscience.in'],
+  rpcUrls: ['https://rpc.cryptoscience.in'],
+  blockExplorerUrls: ['https://testnet.cryptoscience.in'],
 };
 
 export default function Home() {
