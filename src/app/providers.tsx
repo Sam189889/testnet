@@ -17,14 +17,13 @@ export const cscTestnet = defineChain({
     },
     rpcUrls: {
         default: {
-            http: ['http://185.249.225.122:32834'],
-            webSocket: ['ws://185.249.225.122:32835'],
+            http: ['https://rpc.cryptoscience.in'],
         },
     },
     blockExplorers: {
         default: {
             name: 'CSC Explorer',
-            url: 'https://cryptoscience.in',
+            url: 'https://testnet.cryptoscience.in',
         },
     },
     testnet: true,
