@@ -221,6 +221,13 @@ export default function Home() {
                 >
                   🚀 Deploy
                 </Link>
+                {/* Docs Link */}
+                <Link
+                  href="/docs"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 text-blue-400 hover:border-blue-400/50 transition-all text-sm font-medium"
+                >
+                  📚 Docs
+                </Link>
 
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
                   <span className={`w-2 h-2 rounded-full ${networkStats.isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
