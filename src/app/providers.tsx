@@ -32,7 +32,7 @@ export const cscTestnet = defineChain({
 // Wagmi config
 const config = getDefaultConfig({
     appName: 'CSC Explorer',
-    projectId: 'csc-explorer-2024', // WalletConnect project ID (get from cloud.walletconnect.com)
+    projectId: '3519ecbf5f01ff81edd7a6463f7657a3', // WalletConnect project ID (get from cloud.walletconnect.com)
     chains: [cscTestnet],
     ssr: true,
 });
