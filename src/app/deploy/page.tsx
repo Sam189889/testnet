@@ -96,6 +96,7 @@ export default function DeployPage() {
         try {
             const hash = await walletClient.sendTransaction({
                 data: selectedTemplate.bytecode as `0x${string}`,
+                gas: BigInt(3000000), // 3M gas limit
             });
 
             setResult({ success: true, txHash: hash });
@@ -107,6 +108,7 @@ export default function DeployPage() {
             setDeploying(false);
         }
     };
+
 
     const resetFlow = () => {
         setStep(1);
