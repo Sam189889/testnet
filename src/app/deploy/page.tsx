@@ -28,7 +28,7 @@ export default function DeployPage() {
         setError('');
         try {
             const hash = await walletClient.sendTransaction({
-                data: selected.bytecode as \`0x${string}\`,
+                data: selected.bytecode as `0x${string}`,
                 gas: BigInt(5000000),
             });
             setTxHash(hash);
