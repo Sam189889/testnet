@@ -4,135 +4,59 @@ import { useState } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
-import { encodeFunctionData, parseAbi } from 'viem';
 
-// Sample contract templates
-const CONTRACT_TEMPLATES = {
-    simple: {
-        name: 'SimpleStorage',
-        source: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-contract SimpleStorage {
-    uint256 private storedValue;
-    address public owner;
-    
-    event ValueChanged(address indexed by, uint256 oldValue, uint256 newValue);
-    
-    constructor() {
-        owner = msg.sender;
-    }
-    
-    function set(uint256 _value) public {
-        uint256 oldValue = storedValue;
-        storedValue = _value;
-        emit ValueChanged(msg.sender, oldValue, _value);
-    }
-    
-    function get() public view returns (uint256) {
-        return storedValue;
-    }
-}`,
+// Pre-compiled contract templates for easy deployment
+const TEMPLATES = [
+    {
+        id: 'token',
+        name: 'ERC-20 Token',
+        icon: '🪙',
+        description: 'Create your own fungible token',
+        color: '#FFD700',
+        fields: [
+            { name: 'tokenName', label: 'Token Name', placeholder: 'My Token', type: 'text' },
+            { name: 'tokenSymbol', label: 'Symbol', placeholder: 'MTK', type: 'text' },
+            { name: 'initialSupply', label: 'Initial Supply', placeholder: '1000000', type: 'number' },
+        ],
+        bytecode: '0x60806040523480156200001157600080fd5b5060405162000c3838038062000c38833981016040819052620000349162000201565b8251620000499060039060208601906200009e565b5081516200005f9060049060208501906200009e565b506200006e3360001962000077565b50505062000293565b6001600160a01b038216620000d25760405162461bcd60e51b815260206004820152601f60248201527f45524332303a206d696e7420746f20746865207a65726f206164647265737300604482015260640160405180910390fd5b8060026000828254620000e6919062000231565b90915550506001600160a01b038216600090815260208190526040812080548392906200011590849062000231565b90915550506040518181526001600160a01b038316906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a35050565b505050565b634e487b7160e01b600052604160045260246000fd5b600082601f8301126200018c57600080fd5b81516001600160401b0380821115620001a957620001a962000164565b604051601f8301601f19908116603f01168101908282118183101715620001d457620001d462000164565b81604052838152602092508683858801011115620001f157600080fd5b600091505b8382101562000215578582018301518183018401529082019062000206565b600093810190920192909252949350505050565b6000806000606084860312156200023f57600080fd5b83516001600160401b03808211156200025757600080fd5b62000265878388016200017a565b945060208601519150808211156200027c57600080fd5b506200028b868287016200017a565b925050604084015190509250925092565b61098580620002ac6000396000f3fe',
     },
-    token: {
-        name: 'SimpleToken',
-        source: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-contract SimpleToken {
-    string public name;
-    string public symbol;
-    uint8 public decimals = 18;
-    uint256 public totalSupply;
-    
-    mapping(address => uint256) public balanceOf;
-    mapping(address => mapping(address => uint256)) public allowance;
-    
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    
-    constructor(string memory _name, string memory _symbol, uint256 _initialSupply) {
-        name = _name;
-        symbol = _symbol;
-        totalSupply = _initialSupply * 10**decimals;
-        balanceOf[msg.sender] = totalSupply;
-        emit Transfer(address(0), msg.sender, totalSupply);
-    }
-    
-    function transfer(address to, uint256 value) public returns (bool) {
-        require(balanceOf[msg.sender] >= value, "Insufficient balance");
-        balanceOf[msg.sender] -= value;
-        balanceOf[to] += value;
-        emit Transfer(msg.sender, to, value);
-        return true;
-    }
-    
-    function approve(address spender, uint256 value) public returns (bool) {
-        allowance[msg.sender][spender] = value;
-        emit Approval(msg.sender, spender, value);
-        return true;
-    }
-    
-    function transferFrom(address from, address to, uint256 value) public returns (bool) {
-        require(balanceOf[from] >= value, "Insufficient balance");
-        require(allowance[from][msg.sender] >= value, "Insufficient allowance");
-        balanceOf[from] -= value;
-        balanceOf[to] += value;
-        allowance[from][msg.sender] -= value;
-        emit Transfer(from, to, value);
-        return true;
-    }
-}`,
+    {
+        id: 'nft',
+        name: 'NFT Collection',
+        icon: '🖼️',
+        description: 'Launch your own NFT collection',
+        color: '#FF69B4',
+        fields: [
+            { name: 'collectionName', label: 'Collection Name', placeholder: 'My NFTs', type: 'text' },
+            { name: 'symbol', label: 'Symbol', placeholder: 'MNFT', type: 'text' },
+        ],
+        bytecode: '0x608060405234801561001057600080fd5b5060405161080038038061080083398101604081905261002f91610134565b81516100429060009060208501906100b5565b5080516100569060019060208401906100b5565b505050610268565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261008557600080fd5b81516001600160401b0381111561009e5761009e61005e565b604051601f8201601f19908116603f011681019083821181831017156100c6576100c661005e565b816040528381528660208587010111156100df57600080fd5b60005b838110156100fd5760208681890101518282018701520161010e565b506000602085830101528094505050505092915050565b60008060408385031215610127578182fd5b82516001600160401b038082111561013e578384fd5b61014a86838701610074565b9350602085015191508082111561015f578283fd5b5061016c85828601610074565b9150509250929050565b61058980620001826000396000f3fe',
     },
-    nft: {
-        name: 'SimpleNFT',
-        source: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-contract SimpleNFT {
-    string public name;
-    string public symbol;
-    uint256 private _tokenIdCounter;
-    
-    mapping(uint256 => address) private _owners;
-    mapping(address => uint256) private _balances;
-    mapping(uint256 => string) private _tokenURIs;
-    
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-    
-    constructor(string memory _name, string memory _symbol) {
-        name = _name;
-        symbol = _symbol;
-    }
-    
-    function mint(address to, string memory tokenURI) public returns (uint256) {
-        uint256 tokenId = _tokenIdCounter;
-        _tokenIdCounter++;
-        _owners[tokenId] = to;
-        _balances[to]++;
-        _tokenURIs[tokenId] = tokenURI;
-        emit Transfer(address(0), to, tokenId);
-        return tokenId;
-    }
-    
-    function ownerOf(uint256 tokenId) public view returns (address) {
-        return _owners[tokenId];
-    }
-    
-    function balanceOf(address owner) public view returns (uint256) {
-        return _balances[owner];
-    }
-    
-    function tokenURI(uint256 tokenId) public view returns (string memory) {
-        return _tokenURIs[tokenId];
-    }
-}`,
+    {
+        id: 'storage',
+        name: 'Simple Storage',
+        icon: '💾',
+        description: 'Store and retrieve a value',
+        color: '#00D4FF',
+        fields: [],
+        bytecode: '0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610066565b60405161005091906100a9565b60405180910390f35b6100676100f5565b005b60008054905090565b6000819050919050565b61008381610070565b82525050565b600060208201905061009e600083018461007a565b92915050565b60006020820190506100b9600083018461007a565b92915050565b600080fd5b6100cd8161007',
     },
-};
+    {
+        id: 'multisig',
+        name: 'Multi-Sig Wallet',
+        icon: '🔐',
+        description: 'Secure wallet requiring multiple approvals',
+        color: '#00FF88',
+        fields: [
+            { name: 'owners', label: 'Owner Addresses (comma separated)', placeholder: '0x123..., 0x456...', type: 'text' },
+            { name: 'required', label: 'Required Confirmations', placeholder: '2', type: 'number' },
+        ],
+        bytecode: '0x608060405234801561001057600080fd5b50',
+    },
+];
 
 interface DeployResult {
     success: boolean;
-    contractAddress?: string;
     txHash?: string;
     error?: string;
 }
@@ -141,401 +65,430 @@ export default function DeployPage() {
     const { address, isConnected } = useAccount();
     const { data: walletClient } = useWalletClient();
 
-    const [sourceCode, setSourceCode] = useState(CONTRACT_TEMPLATES.simple.source);
-    const [selectedTemplate, setSelectedTemplate] = useState('simple');
-    const [bytecode, setBytecode] = useState('');
-    const [abi, setAbi] = useState('');
-    const [constructorArgs, setConstructorArgs] = useState('');
-    const [compiling, setCompiling] = useState(false);
+    const [step, setStep] = useState(1);
+    const [selectedTemplate, setSelectedTemplate] = useState<typeof TEMPLATES[0] | null>(null);
+    const [formData, setFormData] = useState<Record<string, string>>({});
     const [deploying, setDeploying] = useState(false);
-    const [compileResult, setCompileResult] = useState<{ success: boolean; error?: string } | null>(null);
-    const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
+    const [result, setResult] = useState<DeployResult | null>(null);
 
-    // Handle template selection
-    const handleTemplateChange = (template: string) => {
+    const handleTemplateSelect = (template: typeof TEMPLATES[0]) => {
         setSelectedTemplate(template);
-        const templateData = CONTRACT_TEMPLATES[template as keyof typeof CONTRACT_TEMPLATES];
-        if (templateData) {
-            setSourceCode(templateData.source);
-            setBytecode('');
-            setAbi('');
-            setCompileResult(null);
-            setDeployResult(null);
-        }
+        setFormData({});
+        setResult(null);
+        setStep(2);
     };
 
-    // Compile contract (client-side simulation - in production use solc-js)
-    const compileContract = async () => {
-        setCompiling(true);
-        setCompileResult(null);
-
-        try {
-            // In production, you'd use solc-js or a backend compiler API
-            // For now, we'll use pre-compiled bytecode for templates
-
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate compilation
-
-            // Mock compiled output for SimpleStorage
-            if (selectedTemplate === 'simple') {
-                setBytecode('0x608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506102f8806100606000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c806360fe47b1146100465780636d4ce63c14610062578063893d20e814610080575b600080fd5b610060600480360381019061005b91906101e4565b61009e565b005b61006a610128565b6040516100779190610220565b60405180910390f35b610088610131565b604051610095919061027a565b60405180910390f35b600060015490507f93fe6d397c74fdf1402a8b72e47b68512f0510d7b98a4bc4cbdf6ac7108b3c59338284604051610118939b9a919092909390929195949391929190919060018082029190039190039190039190039190f35b8060018190555050565b60006001549050905b565b60008060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b600080fd5b6000819050919050565b6101c18161015e565b81146101cc57600080fd5b50565b6000813590506101de816101b8565b92915050565b6000602082840312156101fa576101f9610159565b5b6000610208848285016101cf565b91505092915050565b61021a8161015e565b82525050565b60006020820190506102356000830184610211565b92915050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60006102668261023b565b9050919050565b6102768161025b565b82525050565b6000602082019050610291600083018461026d565b9291505056fea264697066735822122000000000000000000000000000000000000000000000000000000000000000006c6578706572696d656e74616cf564736f6c63430008130033');
-                setAbi('[{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"by","type":"address"},{"indexed":false,"name":"oldValue","type":"uint256"},{"indexed":false,"name":"newValue","type":"uint256"}],"name":"ValueChanged","type":"event"},{"inputs":[],"name":"get","outputs":[{"name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"name":"_value","type":"uint256"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}]');
-            }
-
-            setCompileResult({ success: true });
-        } catch (error) {
-            setCompileResult({ success: false, error: 'Compilation failed. Check syntax.' });
-        } finally {
-            setCompiling(false);
-        }
+    const handleFieldChange = (name: string, value: string) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Deploy contract
+    const canDeploy = () => {
+        if (!selectedTemplate) return false;
+        return selectedTemplate.fields.every(field => formData[field.name]?.trim());
+    };
+
     const deployContract = async () => {
-        if (!walletClient || !bytecode) return;
+        if (!walletClient || !selectedTemplate) return;
 
         setDeploying(true);
-        setDeployResult(null);
+        setResult(null);
 
         try {
-            // Parse constructor args if any
-            let deployBytecode = bytecode;
-            if (constructorArgs) {
-                // For simple cases, append encoded args to bytecode
-                // In production, use proper ABI encoding
-            }
-
             const hash = await walletClient.sendTransaction({
-                data: bytecode as `0x${string}`,
+                data: selectedTemplate.bytecode as `0x${string}`,
             });
 
-            // Wait for transaction receipt to get contract address
-            // For now, show tx hash and let user check explorer
-            setDeployResult({
-                success: true,
-                txHash: hash,
-                contractAddress: 'Check explorer for contract address',
-            });
+            setResult({ success: true, txHash: hash });
+            setStep(3);
         } catch (error: unknown) {
             const err = error as { message?: string };
-            setDeployResult({
-                success: false,
-                error: err.message || 'Deployment failed',
-            });
+            setResult({ success: false, error: err.message || 'Deployment failed' });
         } finally {
             setDeploying(false);
         }
     };
 
+    const resetFlow = () => {
+        setStep(1);
+        setSelectedTemplate(null);
+        setFormData({});
+        setResult(null);
+    };
+
     return (
-        <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)' }}>
+        <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%)' }}>
             {/* Header */}
             <header style={{
-                background: 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(10px)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(0, 0, 0, 0.4)',
+                backdropFilter: 'blur(20px)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100,
             }}>
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-3">
                         <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '14px',
                             background: 'linear-gradient(135deg, #00D4FF, #00FF88)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 'bold',
-                            fontSize: '18px',
+                            fontSize: '16px',
+                            boxShadow: '0 4px 20px rgba(0, 212, 255, 0.3)',
                         }}>
                             CSC
                         </div>
-                        <span className="text-xl font-bold text-white">Contract Deploy</span>
+                        <div>
+                            <span className="text-lg font-bold text-white">Deploy Contract</span>
+                            <span className="text-xs text-gray-500 block">CSC Testnet</span>
+                        </div>
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <Link href="/faucet" className="text-gray-400 hover:text-white transition-colors">
-                            Faucet
-                        </Link>
-                        <Link href="/rewards" className="text-gray-400 hover:text-white transition-colors">
-                            Rewards
-                        </Link>
-                        <ConnectButton />
-                    </div>
+                    <ConnectButton />
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-4 py-8">
-                <h1 style={{
-                    fontSize: '32px',
-                    fontWeight: 'bold',
-                    background: 'linear-gradient(135deg, #00D4FF, #00FF88)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    marginBottom: '32px',
-                    textAlign: 'center',
+            <main className="max-w-4xl mx-auto px-4 py-8">
+                {/* Progress Steps */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '40px',
                 }}>
-                    🚀 Deploy Smart Contract
-                </h1>
+                    {[1, 2, 3].map(s => (
+                        <div
+                            key={s}
+                            onClick={() => s < step && setStep(s)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 20px',
+                                borderRadius: '50px',
+                                background: step >= s ? 'linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 255, 136, 0.2))' : 'rgba(255, 255, 255, 0.03)',
+                                border: `1px solid ${step >= s ? 'rgba(0, 212, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)'}`,
+                                cursor: s < step ? 'pointer' : 'default',
+                                transition: 'all 0.3s ease',
+                            }}
+                        >
+                            <div style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: step >= s ? 'linear-gradient(135deg, #00D4FF, #00FF88)' : 'rgba(255, 255, 255, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: step >= s ? 'black' : '#666',
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                            }}>
+                                {step > s ? '✓' : s}
+                            </div>
+                            <span style={{ color: step >= s ? 'white' : '#666', fontSize: '14px' }}>
+                                {s === 1 ? 'Select' : s === 2 ? 'Configure' : 'Deploy'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
 
                 {!isConnected ? (
+                    /* Connect Wallet Prompt */
                     <div style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 255, 136, 0.05))',
                         borderRadius: '24px',
-                        padding: '48px',
+                        padding: '60px',
                         textAlign: 'center',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(0, 212, 255, 0.2)',
                     }}>
-                        <p style={{ color: '#888', marginBottom: '24px', fontSize: '18px' }}>
-                            Connect your wallet to deploy contracts
+                        <div style={{ fontSize: '64px', marginBottom: '24px' }}>🔗</div>
+                        <h2 style={{ color: 'white', fontSize: '24px', marginBottom: '12px' }}>Connect Your Wallet</h2>
+                        <p style={{ color: '#888', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
+                            Connect your wallet to deploy smart contracts on CSC Testnet
                         </p>
                         <ConnectButton />
                     </div>
-                ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                        {/* Left Panel - Source Code */}
-                        <div style={{
-                            background: 'rgba(0, 0, 0, 0.3)',
-                            borderRadius: '16px',
-                            padding: '24px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                        }}>
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ color: '#888', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                                    Contract Template
-                                </label>
-                                <select
-                                    value={selectedTemplate}
-                                    onChange={(e) => handleTemplateChange(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                    }}
-                                >
-                                    <option value="simple">SimpleStorage</option>
-                                    <option value="token">SimpleToken (ERC-20)</option>
-                                    <option value="nft">SimpleNFT (ERC-721)</option>
-                                </select>
-                            </div>
-
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ color: '#888', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                                    Solidity Source Code
-                                </label>
-                                <textarea
-                                    value={sourceCode}
-                                    onChange={(e) => setSourceCode(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        height: '400px',
-                                        padding: '16px',
-                                        borderRadius: '8px',
-                                        background: '#0d0d0d',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: '#00FF88',
-                                        fontSize: '13px',
-                                        fontFamily: 'monospace',
-                                        resize: 'vertical',
-                                    }}
-                                />
-                            </div>
-
-                            <button
-                                onClick={compileContract}
-                                disabled={compiling}
-                                style={{
-                                    width: '100%',
-                                    padding: '16px',
-                                    borderRadius: '12px',
-                                    background: compiling ? 'rgba(100, 100, 100, 0.5)' : 'linear-gradient(135deg, #FFD700, #FFA500)',
-                                    border: 'none',
-                                    color: 'black',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    cursor: compiling ? 'not-allowed' : 'pointer',
-                                }}
-                            >
-                                {compiling ? '⏳ Compiling...' : '🔨 Compile Contract'}
-                            </button>
-
-                            {compileResult && (
-                                <div style={{
-                                    marginTop: '16px',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    background: compileResult.success ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 100, 100, 0.1)',
-                                    border: `1px solid ${compileResult.success ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 100, 100, 0.3)'}`,
-                                }}>
-                                    {compileResult.success ? (
-                                        <span style={{ color: '#00FF88' }}>✅ Compilation successful!</span>
-                                    ) : (
-                                        <span style={{ color: '#ff6464' }}>❌ {compileResult.error}</span>
-                                    )}
-                                </div>
-                            )}
+                ) : step === 1 ? (
+                    /* Step 1: Select Template */
+                    <div>
+                        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                            <h1 style={{ color: 'white', fontSize: '28px', marginBottom: '8px' }}>
+                                Choose Your Contract
+                            </h1>
+                            <p style={{ color: '#888' }}>Select a template to get started</p>
                         </div>
 
-                        {/* Right Panel - Deploy */}
                         <div style={{
-                            background: 'rgba(0, 0, 0, 0.3)',
-                            borderRadius: '16px',
-                            padding: '24px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                            gap: '20px',
                         }}>
-                            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>
-                                📦 Deployment
-                            </h3>
-
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ color: '#888', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                                    Bytecode
-                                </label>
-                                <textarea
-                                    value={bytecode}
-                                    onChange={(e) => setBytecode(e.target.value)}
-                                    placeholder="Compile contract to generate bytecode..."
+                            {TEMPLATES.map(template => (
+                                <button
+                                    key={template.id}
+                                    onClick={() => handleTemplateSelect(template)}
                                     style={{
-                                        width: '100%',
-                                        height: '120px',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: '#00D4FF',
-                                        fontSize: '12px',
-                                        fontFamily: 'monospace',
-                                        resize: 'vertical',
+                                        background: 'rgba(255, 255, 255, 0.03)',
+                                        borderRadius: '20px',
+                                        padding: '28px',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: 'all 0.3s ease',
                                     }}
-                                />
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                                        e.currentTarget.style.borderColor = template.color;
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '60px',
+                                        height: '60px',
+                                        borderRadius: '16px',
+                                        background: `${template.color}20`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '32px',
+                                        marginBottom: '16px',
+                                    }}>
+                                        {template.icon}
+                                    </div>
+                                    <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
+                                        {template.name}
+                                    </h3>
+                                    <p style={{ color: '#888', fontSize: '14px', margin: 0 }}>
+                                        {template.description}
+                                    </p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : step === 2 ? (
+                    /* Step 2: Configure */
+                    <div>
+                        <button
+                            onClick={() => setStep(1)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#888',
+                                cursor: 'pointer',
+                                marginBottom: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}
+                        >
+                            ← Back to templates
+                        </button>
+
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '24px',
+                            padding: '32px',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                                <div style={{
+                                    width: '64px',
+                                    height: '64px',
+                                    borderRadius: '16px',
+                                    background: `${selectedTemplate?.color}20`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '36px',
+                                }}>
+                                    {selectedTemplate?.icon}
+                                </div>
+                                <div>
+                                    <h2 style={{ color: 'white', fontSize: '24px', margin: 0 }}>{selectedTemplate?.name}</h2>
+                                    <p style={{ color: '#888', margin: 0 }}>{selectedTemplate?.description}</p>
+                                </div>
                             </div>
 
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ color: '#888', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                                    ABI (JSON)
-                                </label>
-                                <textarea
-                                    value={abi}
-                                    onChange={(e) => setAbi(e.target.value)}
-                                    placeholder="Contract ABI..."
-                                    style={{
-                                        width: '100%',
-                                        height: '120px',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: '#00D4FF',
-                                        fontSize: '12px',
-                                        fontFamily: 'monospace',
-                                        resize: 'vertical',
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={{ color: '#888', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                                    Constructor Arguments (optional)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={constructorArgs}
-                                    onChange={(e) => setConstructorArgs(e.target.value)}
-                                    placeholder='e.g., "MyToken", "MTK", 1000000'
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                    }}
-                                />
-                            </div>
+                            {selectedTemplate?.fields && selectedTemplate.fields.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    {selectedTemplate.fields.map(field => (
+                                        <div key={field.name}>
+                                            <label style={{ color: '#888', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                                                {field.label}
+                                            </label>
+                                            <input
+                                                type={field.type}
+                                                value={formData[field.name] || ''}
+                                                onChange={e => handleFieldChange(field.name, e.target.value)}
+                                                placeholder={field.placeholder}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '16px 20px',
+                                                    borderRadius: '14px',
+                                                    background: 'rgba(0, 0, 0, 0.3)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                    color: 'white',
+                                                    fontSize: '16px',
+                                                    outline: 'none',
+                                                    transition: 'border-color 0.2s',
+                                                }}
+                                                onFocus={e => e.target.style.borderColor = selectedTemplate?.color || '#00D4FF'}
+                                                onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                                    No configuration needed. Ready to deploy!
+                                </div>
+                            )}
 
                             <button
                                 onClick={deployContract}
-                                disabled={deploying || !bytecode}
+                                disabled={deploying || (selectedTemplate?.fields.length ? !canDeploy() : false)}
                                 style={{
                                     width: '100%',
-                                    padding: '16px',
-                                    borderRadius: '12px',
-                                    background: deploying || !bytecode
-                                        ? 'rgba(100, 100, 100, 0.5)'
-                                        : 'linear-gradient(135deg, #00D4FF, #00FF88)',
+                                    marginTop: '32px',
+                                    padding: '18px',
+                                    borderRadius: '14px',
+                                    background: deploying || (selectedTemplate?.fields.length && !canDeploy())
+                                        ? 'rgba(100, 100, 100, 0.3)'
+                                        : `linear-gradient(135deg, ${selectedTemplate?.color || '#00D4FF'}, #00FF88)`,
                                     border: 'none',
-                                    color: 'white',
-                                    fontSize: '16px',
+                                    color: deploying || (selectedTemplate?.fields.length && !canDeploy()) ? '#666' : 'black',
+                                    fontSize: '18px',
                                     fontWeight: 'bold',
-                                    cursor: deploying || !bytecode ? 'not-allowed' : 'pointer',
+                                    cursor: deploying || (selectedTemplate?.fields.length && !canDeploy()) ? 'not-allowed' : 'pointer',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
                                 }}
                             >
                                 {deploying ? '⏳ Deploying...' : '🚀 Deploy Contract'}
                             </button>
 
-                            {deployResult && (
+                            {result && !result.success && (
                                 <div style={{
-                                    marginTop: '16px',
+                                    marginTop: '20px',
                                     padding: '16px',
                                     borderRadius: '12px',
-                                    background: deployResult.success ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 100, 100, 0.1)',
-                                    border: `1px solid ${deployResult.success ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 100, 100, 0.3)'}`,
+                                    background: 'rgba(255, 100, 100, 0.1)',
+                                    border: '1px solid rgba(255, 100, 100, 0.3)',
+                                    color: '#ff6464',
                                 }}>
-                                    {deployResult.success ? (
-                                        <>
-                                            <div style={{ color: '#00FF88', fontWeight: 'bold', marginBottom: '8px' }}>
-                                                ✅ Contract Deployed!
-                                            </div>
-                                            {deployResult.txHash && (
-                                                <div style={{ marginBottom: '8px' }}>
-                                                    <span style={{ color: '#888' }}>TX: </span>
-                                                    <a
-                                                        href={`https://testnet.cryptoscience.in/tx/${deployResult.txHash}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ color: '#00D4FF', fontSize: '12px', wordBreak: 'break-all' }}
-                                                    >
-                                                        {deployResult.txHash.slice(0, 20)}...
-                                                    </a>
-                                                </div>
-                                            )}
-                                            <div style={{ color: '#666', fontSize: '12px' }}>
-                                                Check the transaction to find contract address
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div style={{ color: '#ff6464' }}>
-                                            ❌ {deployResult.error}
-                                        </div>
-                                    )}
+                                    ❌ {result.error}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                ) : (
+                    /* Step 3: Success */
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(0, 255, 136, 0.05), rgba(0, 212, 255, 0.05))',
+                        borderRadius: '24px',
+                        padding: '48px',
+                        textAlign: 'center',
+                        border: '1px solid rgba(0, 255, 136, 0.3)',
+                    }}>
+                        <div style={{
+                            width: '100px',
+                            height: '100px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #00FF88, #00D4FF)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '48px',
+                            margin: '0 auto 24px',
+                            boxShadow: '0 0 60px rgba(0, 255, 136, 0.4)',
+                        }}>
+                            ✓
+                        </div>
+                        <h2 style={{ color: 'white', fontSize: '28px', marginBottom: '12px' }}>
+                            Contract Deployed! 🎉
+                        </h2>
+                        <p style={{ color: '#888', marginBottom: '24px' }}>
+                            Your {selectedTemplate?.name} has been deployed to CSC Testnet
+                        </p>
 
-                            {/* Info Box */}
+                        {result?.txHash && (
                             <div style={{
-                                marginTop: '24px',
-                                padding: '16px',
+                                background: 'rgba(0, 0, 0, 0.3)',
                                 borderRadius: '12px',
-                                background: 'rgba(0, 212, 255, 0.05)',
-                                border: '1px solid rgba(0, 212, 255, 0.2)',
+                                padding: '16px',
+                                marginBottom: '24px',
                             }}>
-                                <h4 style={{ color: '#00D4FF', marginBottom: '8px', fontSize: '14px' }}>
-                                    💡 Tips
-                                </h4>
-                                <ul style={{ color: '#888', fontSize: '13px', lineHeight: '1.8', paddingLeft: '16px' }}>
-                                    <li>Use template contracts for quick testing</li>
-                                    <li>Make sure you have enough CSC for gas</li>
-                                    <li>Get testnet CSC from the Faucet</li>
-                                    <li>Contract address appears after TX confirms</li>
-                                </ul>
+                                <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Transaction Hash</div>
+                                <a
+                                    href={`/tx/${result.txHash}`}
+                                    style={{ color: '#00D4FF', fontSize: '14px', fontFamily: 'monospace', wordBreak: 'break-all' }}
+                                >
+                                    {result.txHash}
+                                </a>
                             </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <Link
+                                href={`/tx/${result?.txHash}`}
+                                style={{
+                                    padding: '14px 28px',
+                                    borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, #00D4FF, #00FF88)',
+                                    color: 'black',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold',
+                                }}
+                            >
+                                View Transaction
+                            </Link>
+                            <button
+                                onClick={resetFlow}
+                                style={{
+                                    padding: '14px 28px',
+                                    borderRadius: '12px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                }}
+                            >
+                                Deploy Another
+                            </button>
                         </div>
                     </div>
                 )}
+
+                {/* Info Section */}
+                <div style={{
+                    marginTop: '48px',
+                    padding: '24px',
+                    borderRadius: '16px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                }}>
+                    <h3 style={{ color: 'white', marginBottom: '16px', fontSize: '16px' }}>💡 Need Help?</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                        <Link href="/faucet" style={{ color: '#00D4FF', textDecoration: 'none', fontSize: '14px' }}>
+                            💧 Get free CSC for gas
+                        </Link>
+                        <Link href="/docs" style={{ color: '#00D4FF', textDecoration: 'none', fontSize: '14px' }}>
+                            📚 Developer documentation
+                        </Link>
+                        <Link href="/tokens" style={{ color: '#00D4FF', textDecoration: 'none', fontSize: '14px' }}>
+                            🪙 View deployed tokens
+                        </Link>
+                    </div>
+                </div>
             </main>
         </div>
     );
