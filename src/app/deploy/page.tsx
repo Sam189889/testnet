@@ -131,56 +131,58 @@ export default function DeployPage() {
                     ))}
                 </div>
 
-                    <div style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,255,136,0.05))', borderRadius: '24px', padding: '60px', textAlign: 'center', border: '1px solid rgba(0,212,255,0.2)' }}>
-                        <div style={{ fontSize: '64px', marginBottom: '24px' }}>🔗</div>
-                        <h2 style={{ color: 'white', fontSize: '24px', marginBottom: '12px' }}>Connect Your Wallet</h2>
-                        <p style={{ color: '#888', marginBottom: '32px' }}>Connect your wallet to deploy contracts on CSC Testnet</p>
-                        <ConnectButton />
-                    </div>
+                <div style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,255,136,0.05))', borderRadius: '24px', padding: '60px', textAlign: 'center', border: '1px solid rgba(0,212,255,0.2)' }}>
+                    <div style={{ fontSize: '64px', marginBottom: '24px' }}>🔗</div>
+                    <h2 style={{ color: 'white', fontSize: '24px', marginBottom: '12px' }}>Connect Your Wallet</h2>
+                    <p style={{ color: '#888', marginBottom: '32px' }}>Connect your wallet to deploy contracts on CSC Testnet</p>
+                    <ConnectButton />
+                </div>
                 ) : step === 1 ? (
-                    <div>
-                        <div style={{ textAlign: 'center', marginBottom: '32px' }}><h1 style={{ color: 'white', fontSize: '28px', marginBottom: '8px' }}>Choose Your Contract</h1><p style={{ color: '#888' }}>Select a template to deploy</p></div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                            {TEMPLATES.map(t => (
-                                <button key={t.id} onClick={() => handleTemplateSelect(t)} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '20px', padding: '28px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.3s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = t.color; e.currentTarget.style.transform = 'translateY(-4px)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-                                    <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: t.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '16px' }}>{t.icon}</div>
-                                    <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>{t.name}</h3>
-                                    <p style={{ color: '#888', fontSize: '14px', margin: 0 }}>{t.description}</p>
-                                    {t.note && <p style={{ color: '#666', fontSize: '12px', marginTop: '8px', fontStyle: 'italic' }}>{t.note}</p>}
-                                </button>
-                            ))}
-                        </div>
+                <div>
+                    <div style={{ textAlign: 'center', marginBottom: '32px' }}><h1 style={{ color: 'white', fontSize: '28px', marginBottom: '8px' }}>Choose Your Contract</h1><p style={{ color: '#888' }}>Select a template to deploy</p></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                        {TEMPLATES.map(t => (
+                            <button key={t.id} onClick={() => handleTemplateSelect(t)} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '20px', padding: '28px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.3s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = t.color; e.currentTarget.style.transform = 'translateY(-4px)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: t.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '16px' }}>{t.icon}</div>
+                                <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>{t.name}</h3>
+                                <p style={{ color: '#888', fontSize: '14px', margin: 0 }}>{t.description}</p>
+                                {t.note && <p style={{ color: '#666', fontSize: '12px', marginTop: '8px', fontStyle: 'italic' }}>{t.note}</p>}
+                            </button>
+                        ))}
                     </div>
+                </div>
                 ) : step === 2 ? (
-                    <div>
-                        <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>← Back</button>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '24px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: (selectedTemplate?.color || '#00D4FF') + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>{selectedTemplate?.icon}</div>
-                                <div><h2 style={{ color: 'white', fontSize: '24px', margin: 0 }}>{selectedTemplate?.name}</h2><p style={{ color: '#888', margin: 0 }}>{selectedTemplate?.description}</p>{selectedTemplate?.note && <p style={{ color: '#666', fontSize: '13px', marginTop: '4px' }}>{selectedTemplate.note}</p>}</div>
-                            </div>
-
-                            {selectedTemplate?.fields && selectedTemplate.fields.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {selectedTemplate.fields.map(f => (
-                                        <div key={f.name}><label style={{ color: '#888', fontSize: '14px', marginBottom: '8px', display: 'block' }}>{f.label}</label><input type={f.type} value={formData[f.name] || ''} onChange={e => handleFieldChange(f.name, e.target.value)} placeholder={f.placeholder} style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '16px', outline: 'none' }} /></div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ color: '#888', textAlign: 'center', padding: '20px', background: 'rgba(0,255,136,0.05)', borderRadius: '12px', border: '1px solid rgba(0,255,136,0.2)' }}>✓ Ready to deploy! No configuration needed.</div>
-                            )}
-
-
+                <div>
+                    <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>← Back</button>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '24px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: (selectedTemplate?.color || '#00D4FF') + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>{selectedTemplate?.icon}</div>
+                            <div><h2 style={{ color: 'white', fontSize: '24px', margin: 0 }}>{selectedTemplate?.name}</h2><p style={{ color: '#888', margin: 0 }}>{selectedTemplate?.description}</p>{selectedTemplate?.note && <p style={{ color: '#666', fontSize: '13px', marginTop: '4px' }}>{selectedTemplate.note}</p>}</div>
                         </div>
+
+                        {selectedTemplate?.fields && selectedTemplate.fields.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {selectedTemplate.fields.map(f => (
+                                    <div key={f.name}><label style={{ color: '#888', fontSize: '14px', marginBottom: '8px', display: 'block' }}>{f.label}</label><input type={f.type} value={formData[f.name] || ''} onChange={e => handleFieldChange(f.name, e.target.value)} placeholder={f.placeholder} style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '16px', outline: 'none' }} /></div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ color: '#888', textAlign: 'center', padding: '20px', background: 'rgba(0,255,136,0.05)', borderRadius: '12px', border: '1px solid rgba(0,255,136,0.2)' }}>✓ Ready to deploy! No configuration needed.</div>
+                        )}
+
+                        <button onClick={deployContract} disabled={deploying || !canDeploy()} style={{ width: '100%', marginTop: '32px', padding: '18px', borderRadius: '14px', background: deploying || !canDeploy() ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, ' + (selectedTemplate?.color || '#00D4FF') + ', #00FF88)', border: 'none', color: deploying || !canDeploy() ? '#666' : 'black', fontSize: '18px', fontWeight: 'bold', cursor: deploying || !canDeploy() ? 'not-allowed' : 'pointer' }}>{deploying ? '⏳ Deploying...' : '🚀 Deploy Contract'}</button>
+
+                        {result && !result.success && <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', background: 'rgba(255,100,100,0.1)', border: '1px solid rgba(255,100,100,0.3)', color: '#ff6464', maxHeight: '100px', overflow: 'auto', wordBreak: 'break-word', fontSize: '14px' }}>❌ {result.error}</div>}
                     </div>
+                </div>
                 ) : (
-                    <div style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.05), rgba(0,212,255,0.05))', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid rgba(0,255,136,0.3)' }}>
-                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, #00FF88, #00D4FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', margin: '0 auto 24px', boxShadow: '0 0 60px rgba(0,255,136,0.4)' }}>✓</div>
-                        <h2 style={{ color: 'white', fontSize: '28px', marginBottom: '12px' }}>Contract Deployed! 🎉</h2>
-                        <p style={{ color: '#888', marginBottom: '24px' }}>Your {selectedTemplate?.name} is live on CSC Testnet</p>
-                        {result?.txHash && <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}><div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Transaction Hash</div><a href={`/tx/${result.txHash}`} style={{ color: '#00D4FF', fontSize: '14px', fontFamily: 'monospace', wordBreak: 'break-all' }}>{result.txHash}</a></div>}
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}><Link href={`/tx/${result?.txHash}`} style={{ padding: '14px 28px', borderRadius: '12px', background: 'linear-gradient(135deg, #00D4FF, #00FF88)', color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>View Transaction</Link><button onClick={resetFlow} style={{ padding: '14px 28px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Deploy Another</button></div>
-                    </div>
+                <div style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.05), rgba(0,212,255,0.05))', borderRadius: '24px', padding: '48px', textAlign: 'center', border: '1px solid rgba(0,255,136,0.3)' }}>
+                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, #00FF88, #00D4FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', margin: '0 auto 24px', boxShadow: '0 0 60px rgba(0,255,136,0.4)' }}>✓</div>
+                    <h2 style={{ color: 'white', fontSize: '28px', marginBottom: '12px' }}>Contract Deployed! 🎉</h2>
+                    <p style={{ color: '#888', marginBottom: '24px' }}>Your {selectedTemplate?.name} is live on CSC Testnet</p>
+                    {result?.txHash && <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}><div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Transaction Hash</div><a href={`/tx/${result.txHash}`} style={{ color: '#00D4FF', fontSize: '14px', fontFamily: 'monospace', wordBreak: 'break-all' }}>{result.txHash}</a></div>}
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}><Link href={`/tx/${result?.txHash}`} style={{ padding: '14px 28px', borderRadius: '12px', background: 'linear-gradient(135deg, #00D4FF, #00FF88)', color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>View Transaction</Link><button onClick={resetFlow} style={{ padding: '14px 28px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Deploy Another</button></div>
+                </div>
                 )}
 
                 <div style={{ marginTop: '48px', padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
