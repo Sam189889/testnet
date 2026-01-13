@@ -385,8 +385,12 @@ export default function DeployPage() {
                                     background: 'rgba(255, 100, 100, 0.1)',
                                     border: '1px solid rgba(255, 100, 100, 0.3)',
                                     color: '#ff6464',
+                                    maxHeight: '150px',
+                                    overflow: 'auto',
+                                    wordBreak: 'break-word',
+                                    fontSize: '14px',
                                 }}>
-                                    ❌ {result.error}
+                                    ❌ {result.error?.includes('denied') ? 'Transaction cancelled by user' : result.error?.slice(0, 200) || 'Deployment failed'}
                                 </div>
                             )}
                         </div>
