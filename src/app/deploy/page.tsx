@@ -172,7 +172,7 @@ export default function DeployPage() {
             );
 
             // Combine bytecode + encoded constructor params
-            const deployData = (BYTECODES[selected.bytecodeKey] + encodedParams.slice(2)) as \`0x\${string}\`;
+            const deployData = (BYTECODES[selected.bytecodeKey] + encodedParams.slice(2)) as `0x${string}`;
 
             const hash = await walletClient.sendTransaction({
                 data: deployData,
