@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { formatEther } from 'viem';
+import { formatEther, formatUnits } from 'viem';
 
 const RPC_URL = 'https://rpc.cryptoscience.in';
 
@@ -17,6 +17,14 @@ interface Transaction {
     type: 'in' | 'out' | 'self';
 }
 
+interface TokenInfo {
+    name: string;
+    symbol: string;
+    decimals: number;
+    totalSupply: string;
+    type: 'ERC-20' | 'ERC-721' | 'Unknown';
+}
+
 export default function AddressPage() {
     const params = useParams();
     const address = (params.addr as string)?.toLowerCase();
@@ -24,6 +32,7 @@ export default function AddressPage() {
     const [balance, setBalance] = useState<string>('0');
     const [txCount, setTxCount] = useState<number>(0);
     const [isContract, setIsContract] = useState<boolean>(false);
+    const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [txLoading, setTxLoading] = useState(true);
@@ -35,6 +44,94 @@ export default function AddressPage() {
             fetchTransactions();
         }
     }, [address]);
+
+    // Helper to call token methods
+    const callTokenMethod = async (methodSignature: string): Promise<string | null> => {
+        try {
+            const res = await fetch(RPC_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'eth_call',
+                    params: [{ to: address, data: methodSignature }, 'latest'],
+                    id: 1,
+                }),
+            });
+            const data = await res.json();
+            return data.result && data.result !== '0x' ? data.result : null;
+        } catch {
+            return null;
+        }
+    };
+
+    const decodeString = (hex: string): string => {
+        if (!hex || hex === '0x' || hex.length < 130) return '';
+        try {
+            // Skip function selector + offset (64 chars) + length (64 chars) = 128 chars after 0x
+            const lengthHex = hex.slice(66, 130);
+            const length = parseInt(lengthHex, 16);
+            const strHex = hex.slice(130, 130 + length * 2);
+            let str = '';
+            for (let i = 0; i < strHex.length; i += 2) {
+                const charCode = parseInt(strHex.substr(i, 2), 16);
+                if (charCode > 0) str += String.fromCharCode(charCode);
+            }
+            return str;
+        } catch {
+            return '';
+        }
+    };
+
+    const fetchTokenInfo = async () => {
+        try {
+            // Method signatures
+            const NAME_SIG = '0x06fdde03'; // name()
+            const SYMBOL_SIG = '0x95d89b41'; // symbol()
+            const DECIMALS_SIG = '0x313ce567'; // decimals()
+            const TOTAL_SUPPLY_SIG = '0x18160ddd'; // totalSupply()
+            const SUPPORTS_INTERFACE_721 = '0x01ffc9a780ac58cd00000000000000000000000000000000000000000000000000000000'; // supportsInterface(0x80ac58cd) for ERC-721
+
+            // Check if ERC-721 first
+            const is721 = await callTokenMethod(SUPPORTS_INTERFACE_721);
+            const isERC721 = is721 && is721 !== '0x' && is721.endsWith('1');
+
+            // Try to get token info
+            const [nameResult, symbolResult, decimalsResult, totalSupplyResult] = await Promise.all([
+                callTokenMethod(NAME_SIG),
+                callTokenMethod(SYMBOL_SIG),
+                callTokenMethod(DECIMALS_SIG),
+                callTokenMethod(TOTAL_SUPPLY_SIG),
+            ]);
+
+            const name = decodeString(nameResult || '');
+            const symbol = decodeString(symbolResult || '');
+            const decimals = decimalsResult ? parseInt(decimalsResult, 16) : (isERC721 ? 0 : 18);
+
+            // If we have name and symbol, it's likely a token
+            if (name && symbol) {
+                let formattedSupply = '0';
+                if (totalSupplyResult && totalSupplyResult !== '0x') {
+                    const supplyBigInt = BigInt(totalSupplyResult);
+                    if (isERC721 || decimals === 0) {
+                        formattedSupply = supplyBigInt.toString();
+                    } else {
+                        formattedSupply = formatUnits(supplyBigInt, decimals);
+                    }
+                }
+
+                setTokenInfo({
+                    name,
+                    symbol,
+                    decimals,
+                    totalSupply: formattedSupply,
+                    type: isERC721 ? 'ERC-721' : 'ERC-20',
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch token info:', error);
+        }
+    };
 
     const fetchAddressInfo = async () => {
         try {
@@ -82,7 +179,13 @@ export default function AddressPage() {
                 }),
             });
             const codeData = await codeRes.json();
-            setIsContract(codeData.result && codeData.result !== '0x');
+            const isContractAddr = codeData.result && codeData.result !== '0x';
+            setIsContract(isContractAddr);
+
+            // If it's a contract, try to fetch token info
+            if (isContractAddr) {
+                fetchTokenInfo();
+            }
         } catch (error) {
             console.error('Failed to fetch address info:', error);
         } finally {
@@ -363,6 +466,57 @@ export default function AddressPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Token Info Section - Only shows for token contracts */}
+                {tokenInfo && (
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 136, 0, 0.1))',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        marginBottom: '24px',
+                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                            <span style={{ fontSize: '32px' }}>{tokenInfo.type === 'ERC-721' ? '🖼️' : '🪙'}</span>
+                            <div>
+                                <h3 style={{ margin: 0, color: 'white', fontSize: '24px' }}>{tokenInfo.name}</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                    <span style={{
+                                        padding: '4px 10px',
+                                        borderRadius: '8px',
+                                        background: tokenInfo.type === 'ERC-721' ? 'rgba(233, 30, 99, 0.2)' : 'rgba(0, 212, 255, 0.2)',
+                                        color: tokenInfo.type === 'ERC-721' ? '#E91E63' : '#00D4FF',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                    }}>{tokenInfo.type}</span>
+                                    <span style={{ color: '#FFD700', fontWeight: 'bold' }}>${tokenInfo.symbol}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                            <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Total Supply</div>
+                                <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
+                                    {parseFloat(tokenInfo.totalSupply).toLocaleString()}
+                                </div>
+                            </div>
+                            {tokenInfo.type === 'ERC-20' && (
+                                <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '16px', borderRadius: '12px' }}>
+                                    <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Decimals</div>
+                                    <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
+                                        {tokenInfo.decimals}
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Symbol</div>
+                                <div style={{ color: '#FFD700', fontSize: '18px', fontWeight: 'bold' }}>
+                                    {tokenInfo.symbol}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Transactions */}
                 <div style={{
