@@ -106,43 +106,99 @@ export default function AddressPage() {
             const blockNumData = await blockNumRes.json();
             const latestBlock = parseInt(blockNumData.result, 16);
 
-            // Search last 100 blocks for transactions
+            // Search more blocks to find transactions (up to 500 blocks)
             const addressTxs: Transaction[] = [];
-            const blocksToSearch = Math.min(100, latestBlock);
+            const blocksToSearch = Math.min(500, latestBlock);
+            const batchSize = 10; // Fetch 10 blocks at a time
 
-            for (let i = latestBlock; i > latestBlock - blocksToSearch && addressTxs.length < 25; i--) {
-                const blockRes = await fetch(RPC_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+            for (let start = latestBlock; start > latestBlock - blocksToSearch && addressTxs.length < 50; start -= batchSize) {
+                // Create batch RPC request for multiple blocks
+                const batchRequests = [];
+                for (let i = 0; i < batchSize && (start - i) > 0; i++) {
+                    const blockNum = start - i;
+                    batchRequests.push({
                         jsonrpc: '2.0',
                         method: 'eth_getBlockByNumber',
-                        params: [`0x${i.toString(16)}`, true],
-                        id: i,
-                    }),
-                });
-                const blockData = await blockRes.json();
+                        params: [`0x${blockNum.toString(16)}`, true],
+                        id: blockNum,
+                    });
+                }
 
-                if (blockData.result && blockData.result.transactions) {
-                    const block = blockData.result;
-                    const blockTimestamp = parseInt(block.timestamp, 16);
+                try {
+                    const batchRes = await fetch(RPC_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(batchRequests),
+                    });
+                    const batchData = await batchRes.json();
 
-                    for (const tx of block.transactions) {
-                        const fromMatch = tx.from?.toLowerCase() === address;
-                        const toMatch = tx.to?.toLowerCase() === address;
+                    // Handle both array and single response
+                    const results = Array.isArray(batchData) ? batchData : [batchData];
 
-                        if (fromMatch || toMatch) {
-                            addressTxs.push({
-                                ...tx,
-                                timestamp: blockTimestamp,
-                                type: fromMatch && toMatch ? 'self' : fromMatch ? 'out' : 'in',
+                    for (const blockData of results) {
+                        if (blockData.result && blockData.result.transactions) {
+                            const block = blockData.result;
+                            const blockTimestamp = parseInt(block.timestamp, 16);
+
+                            for (const tx of block.transactions) {
+                                const fromMatch = tx.from?.toLowerCase() === address;
+                                const toMatch = tx.to?.toLowerCase() === address;
+
+                                if (fromMatch || toMatch) {
+                                    addressTxs.push({
+                                        ...tx,
+                                        timestamp: blockTimestamp,
+                                        type: fromMatch && toMatch ? 'self' : fromMatch ? 'out' : 'in',
+                                    });
+                                    if (addressTxs.length >= 50) break;
+                                }
+                            }
+                        }
+                    }
+                } catch (batchError) {
+                    // If batch fails, try individual requests
+                    for (let i = 0; i < batchSize && (start - i) > 0 && addressTxs.length < 50; i++) {
+                        const blockNum = start - i;
+                        try {
+                            const blockRes = await fetch(RPC_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    jsonrpc: '2.0',
+                                    method: 'eth_getBlockByNumber',
+                                    params: [`0x${blockNum.toString(16)}`, true],
+                                    id: blockNum,
+                                }),
                             });
-                            if (addressTxs.length >= 25) break;
+                            const blockData = await blockRes.json();
+
+                            if (blockData.result && blockData.result.transactions) {
+                                const block = blockData.result;
+                                const blockTimestamp = parseInt(block.timestamp, 16);
+
+                                for (const tx of block.transactions) {
+                                    const fromMatch = tx.from?.toLowerCase() === address;
+                                    const toMatch = tx.to?.toLowerCase() === address;
+
+                                    if (fromMatch || toMatch) {
+                                        addressTxs.push({
+                                            ...tx,
+                                            timestamp: blockTimestamp,
+                                            type: fromMatch && toMatch ? 'self' : fromMatch ? 'out' : 'in',
+                                        });
+                                        if (addressTxs.length >= 50) break;
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Block fetch error:', err);
                         }
                     }
                 }
             }
 
+            // Sort by timestamp descending (newest first)
+            addressTxs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             setTransactions(addressTxs);
         } catch (error) {
             console.error('Failed to fetch transactions:', error);
